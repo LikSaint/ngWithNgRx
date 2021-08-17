@@ -20,6 +20,7 @@ export class AppComponent {
     private store: Store,
     private heroesApi: HeroesApi,
   ) {
+    this.store.select(heroesListSelector).subscribe((res) => console.log(res));
   }
 
   public addHero(): void {

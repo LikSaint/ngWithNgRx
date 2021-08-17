@@ -1,4 +1,5 @@
-import {createAction, createFeatureSelector, createReducer, createSelector, on, props} from '@ngrx/store';
+import {Action, ActionReducer, createAction, createFeatureSelector, createReducer, createSelector, on, props, State} from '@ngrx/store';
+import { EntityState, EntityAdapter, createEntityAdapter } from '@ngrx/entity';
 import {Hero} from '../hero';
 
 export const HEROES_KEY = 'heroes';
@@ -10,45 +11,52 @@ export const changeUpdatedAt = createAction(
   `[${HEROES_KEY}] change updated at`,
   props<{updatedAt: number}>());
 
-export interface HeroesState {
-  heroes: Hero[];
+export const heroAdapter: EntityAdapter<Hero> = createEntityAdapter<Hero>();
+
+export interface HeroesState extends EntityState<Hero> {
   updatedAt?: number;
 }
 
-export const initialState: HeroesState = {
-  heroes: [],
-};
+export const initialState: HeroesState = heroAdapter.getInitialState({
+  ids: [],
+  entities: {}
+});
 
 export const heroesReducer = createReducer(
   initialState,
-  on(addHero, (state, action) => ({
-    ...state,
-    heroes: [...state.heroes, action.hero],
-  })),
-  on(deleteHero, (state, action) => ({
-    ...state,
-    heroes: state.heroes.filter(hero => hero.id !== action.heroId),
-  })),
-  on(clear, state => ({
-    ...state,
-    heroes: []
-  })),
+  on(addHero, (state, action) => (
+    heroAdapter.addOne(action.hero, state)
+  )),
+  on(deleteHero, (state, action) => (
+    heroAdapter.removeOne(action.heroId, state)
+  )),
+  on(clear, state => (
+    heroAdapter.removeAll(state)
+  )),
   on(changeUpdatedAt, (state, action) => ({
     ...state,
     updatedAt: action.updatedAt
   })),
 );
 
+export function reducer(state: HeroesState | undefined, action: Action): HeroesState {
+  return heroesReducer(state, action);
+}
+
 export const featureSelector = createFeatureSelector<HeroesState>(HEROES_KEY);
+const {
+  selectAll,
+  selectTotal,
+} = heroAdapter.getSelectors();
 
 export const heroesListSelector = createSelector(
   featureSelector,
-  state => state.heroes
+  selectAll
 );
 
 export const heroesCountSelector = createSelector(
   featureSelector,
-  state => state.heroes.length
+  selectTotal
 );
 
 export const updatedAtSelector = createSelector(
